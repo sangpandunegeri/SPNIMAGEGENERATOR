@@ -1,5 +1,5 @@
 {
-  "name": "SPN-AIPHOTO Generator",
+  "name": "SPN-AIPHOTO Generator Suite",
   "description": "An AI-powered photo generator that takes a reference image and creates multiple professional poses and expressions with various studio backgrounds.",
   "requestFramePermissions": []
 }

@@ -3,6 +3,11 @@ export enum Mode {
   ProductPhoto = 'Foto Produk',
 }
 
+export enum ImageModel {
+  GeminiFlash = 'gemini-2.5-flash-image-preview',
+  Imagen4 = 'imagen-4.0-generate-001',
+}
+
 export enum BackgroundOption {
   Minimalist = 'Studio Minimalis',
   Reference = 'Sesuai Referensi',

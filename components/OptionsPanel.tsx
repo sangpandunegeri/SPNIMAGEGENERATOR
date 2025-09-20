@@ -1,15 +1,19 @@
 
 import React from 'react';
-import { Mode, BackgroundOption, ProductBackgroundOption, AspectRatio, PoseCategory } from '../types';
+import { Mode, BackgroundOption, ProductBackgroundOption, AspectRatio, PoseCategory, ImageModel } from '../types';
 import ImageUploader from './ImageUploader';
 import Button from './Button';
 import { SettingsIcon } from './icons';
+import { useUsage } from '../contexts/UsageContext';
+import { FREE_TIER_DAILY_LIMIT } from '../constants';
 
 interface OptionsPanelProps {
     referenceFile: File | null;
     setReferenceFile: (file: File) => void;
     mode: Mode;
     setMode: (mode: Mode) => void;
+    imageModel: ImageModel;
+    setImageModel: (model: ImageModel) => void;
     backgroundOption: BackgroundOption;
     setBackgroundOption: (option: BackgroundOption) => void;
     productBackgroundOption: ProductBackgroundOption;
@@ -38,6 +42,8 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
     setReferenceFile,
     mode,
     setMode,
+    imageModel,
+    setImageModel,
     backgroundOption,
     setBackgroundOption,
     productBackgroundOption,
@@ -60,6 +66,16 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
     setCustomBackgroundFile,
     onOpenSettings,
 }) => {
+    const isImageInputDisabled = imageModel === ImageModel.Imagen4;
+    const { usageCount } = useUsage();
+
+    const renderModelDescription = () => {
+        if (imageModel === ImageModel.Imagen4) {
+            return "Membuat gambar baru dari teks, tidak perlu foto referensi.";
+        }
+        return "Mengedit foto referensi yang ada untuk pose baru.";
+    };
+    
     return (
         <div className="w-full bg-white p-6 rounded-2xl shadow-sm space-y-6 relative">
              <div className="absolute top-4 right-4">
@@ -72,9 +88,12 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
                     <SettingsIcon className="w-6 h-6" />
                 </button>
             </div>
-            <div>
+            <div className={`transition-opacity duration-300 ${isImageInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <h2 className="text-lg font-bold text-gray-800 mb-2">Unggah Foto Referensi</h2>
-                <ImageUploader onImageChange={setReferenceFile} />
+                <div className="relative">
+                    <ImageUploader onImageChange={setReferenceFile} />
+                    {isImageInputDisabled && <div className="absolute inset-0 bg-gray-50/50" title="Model Imagen 4 tidak memerlukan gambar referensi."></div>}
+                </div>
             </div>
 
             <div>
@@ -93,19 +112,49 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
                 </div>
             </div>
 
+             <div>
+                <h2 className="text-lg font-bold text-gray-800 mb-2">Penggunaan Hari Ini</h2>
+                <div className="text-center bg-gray-100 p-3 rounded-lg">
+                    <p className="text-2xl font-mono font-bold text-teal-600">
+                        {usageCount} <span className="text-gray-500 text-lg">/ {FREE_TIER_DAILY_LIMIT}</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Batas direset setiap hari. Ini adalah perkiraan untuk tingkat gratis.
+                    </p>
+                </div>
+            </div>
+            
+            <div>
+                 <label htmlFor="image-model" className="text-lg font-bold text-gray-800 mb-2 block">Model Gambar</label>
+                 <select
+                    id="image-model"
+                    value={imageModel}
+                    onChange={(e) => setImageModel(e.target.value as ImageModel)}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                 >
+                    <option value={ImageModel.GeminiFlash}>Gemini Flash (Edit Cepat)</option>
+                    <option value={ImageModel.Imagen4}>Imagen 4 (Generasi Baru)</option>
+                 </select>
+                 <p className="text-xs text-gray-500 mt-1">{renderModelDescription()}</p>
+            </div>
+
             {mode === Mode.PoseGenerator ? (
                 <>
                     <div>
                         <h2 className="text-lg font-bold text-gray-800 mb-2">Opsi Latar</h2>
                         <div className="grid grid-cols-2 gap-2">
-                            {Object.values(BackgroundOption).map(option => (
+                            {Object.values(BackgroundOption).map(option => {
+                                const isDisabled = isImageInputDisabled && (option === BackgroundOption.Reference || option === BackgroundOption.EditBackground);
+                                return (
                                 <button key={option} onClick={() => setBackgroundOption(option)}
-                                    className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${backgroundOption === option ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>
+                                    disabled={isDisabled}
+                                    className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${backgroundOption === option ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                     {option}
                                 </button>
-                            ))}
+                                );
+                            })}
                         </div>
-                        {backgroundOption === BackgroundOption.EditBackground && (
+                        {backgroundOption === BackgroundOption.EditBackground && !isImageInputDisabled && (
                             <div className="mt-4">
                                 <h3 className="text-md font-bold text-gray-800 mb-2">Unggah Latar Kustom</h3>
                                 <ImageUploader
@@ -132,14 +181,18 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
                  <div>
                     <h2 className="text-lg font-bold text-gray-800 mb-2">Opsi Latar</h2>
                     <div className="grid grid-cols-3 gap-2">
-                        {Object.values(ProductBackgroundOption).map(option => (
-                            <button key={option} onClick={() => setProductBackgroundOption(option)}
-                                className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${productBackgroundOption === option ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>
-                                {option}
-                            </button>
-                        ))}
+                        {Object.values(ProductBackgroundOption).map(option => {
+                            const isDisabled = isImageInputDisabled && option === ProductBackgroundOption.CustomImage;
+                             return (
+                                <button key={option} onClick={() => setProductBackgroundOption(option)}
+                                    disabled={isDisabled}
+                                    className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${productBackgroundOption === option ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                    {option}
+                                </button>
+                            );
+                        })}
                     </div>
-                    {productBackgroundOption === ProductBackgroundOption.CustomImage && (
+                    {productBackgroundOption === ProductBackgroundOption.CustomImage && !isImageInputDisabled && (
                         <div className="mt-4">
                             <h3 className="text-md font-bold text-gray-800 mb-2">Unggah Latar Kustom</h3>
                              <ImageUploader 

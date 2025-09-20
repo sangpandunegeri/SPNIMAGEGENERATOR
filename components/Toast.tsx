@@ -2,12 +2,12 @@
 import React, { useEffect } from 'react';
 
 interface ToastProps {
-  message: string | null;
+  message: React.ReactNode | null;
   onClose: () => void;
   duration?: number;
 }
 
-const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 5000 }) => {
+const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 8000 }) => {
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => {
@@ -23,13 +23,17 @@ const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 5000 }) => {
 
   return (
     <div 
-      className="fixed top-5 right-5 bg-red-600 text-white py-2 px-4 rounded-lg shadow-lg animate-slide-in-down z-50"
+      className="fixed top-5 right-5 max-w-sm bg-red-600 text-white py-2 px-4 rounded-lg shadow-lg animate-slide-in-down z-50"
       role="alert"
     >
-      <div className="flex items-center">
-        <span className="font-semibold mr-3">Error</span>
-        <p>{message}</p>
-        <button onClick={onClose} className="ml-4 text-xl font-light leading-none">&times;</button>
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <span className="font-semibold mr-2">Error:</span>
+        </div>
+        <div className="flex-grow">
+          {message}
+        </div>
+        <button onClick={onClose} className="ml-4 -mt-1 text-2xl font-light leading-none">&times;</button>
       </div>
     </div>
   );

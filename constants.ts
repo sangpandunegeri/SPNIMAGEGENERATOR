@@ -15,3 +15,5 @@ export const INITIAL_IMAGES: GeneratedImage[] = [
     { id: '11', src: 'https://picsum.photos/seed/relaxed/400', label: 'Relaxed Pockets', status: 'placeholder' },
     { id: '12', src: 'https://picsum.photos/seed/playful/400', label: 'Playful Peek', status: 'placeholder' },
 ];
+
+export const FREE_TIER_DAILY_LIMIT = 60;

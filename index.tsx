@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ApiKeyProvider } from './contexts/ApiKeyContext';
+import { UsageProvider } from './contexts/UsageContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -13,7 +14,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ApiKeyProvider>
-      <App />
+      <UsageProvider>
+        <App />
+      </UsageProvider>
     </ApiKeyProvider>
   </React.StrictMode>
 );

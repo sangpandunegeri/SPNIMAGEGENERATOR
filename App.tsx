@@ -2,16 +2,18 @@
 import React, { useState, useCallback } from 'react';
 import OptionsPanel from './components/OptionsPanel';
 import ResultsGrid from './components/ResultsGrid';
-import { Mode, BackgroundOption, GeneratedImage, ProductBackgroundOption, AspectRatio, PoseCategory } from './types';
+import { Mode, BackgroundOption, GeneratedImage, ProductBackgroundOption, AspectRatio, PoseCategory, ImageModel } from './types';
 import { INITIAL_IMAGES } from './constants';
 import { generatePoses, generateProductPhotos } from './services/geminiService';
 import SettingsModal from './components/SettingsModal';
 import Toast from './components/Toast';
 import { useApiKey } from './contexts/ApiKeyContext';
+import { useUsage } from './contexts/UsageContext';
 
 const App: React.FC = () => {
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [mode, setMode] = useState<Mode>(Mode.PoseGenerator);
+  const [imageModel, setImageModel] = useState<ImageModel>(ImageModel.GeminiFlash);
   const [backgroundOption, setBackgroundOption] = useState<BackgroundOption>(BackgroundOption.Reference);
   const [productBackgroundOption, setProductBackgroundOption] = useState<ProductBackgroundOption>(ProductBackgroundOption.FamousPlaces);
   const [poseCategory, setPoseCategory] = useState<PoseCategory>(PoseCategory.Corporate);
@@ -24,8 +26,9 @@ const App: React.FC = () => {
   const [isGenerated, setIsGenerated] = useState<boolean>(false);
   const [customBackgroundFile, setCustomBackgroundFile] = useState<File | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const { apiKey } = useApiKey();
+  const [toastMessage, setToastMessage] = useState<React.ReactNode | null>(null);
+  const { activeApiKey } = useApiKey();
+  const { incrementUsage } = useUsage();
 
 
   React.useEffect(() => {
@@ -36,6 +39,19 @@ const App: React.FC = () => {
     }
     setCustomBackgroundFile(null);
   }, [mode]);
+  
+  React.useEffect(() => {
+    // If user switches to a model that doesn't use a reference image, clear it.
+    if (imageModel === ImageModel.Imagen4) {
+      setReferenceFile(null);
+      if (backgroundOption === BackgroundOption.Reference || backgroundOption === BackgroundOption.EditBackground) {
+        setBackgroundOption(BackgroundOption.Minimalist);
+      }
+      if (productBackgroundOption === ProductBackgroundOption.CustomImage) {
+        setProductBackgroundOption(ProductBackgroundOption.ProfessionalStudio);
+      }
+    }
+  }, [imageModel]);
 
   React.useEffect(() => {
     if (mode === Mode.PoseGenerator && backgroundOption !== BackgroundOption.EditBackground) {
@@ -47,12 +63,12 @@ const App: React.FC = () => {
   }, [mode, backgroundOption, productBackgroundOption]);
 
   const handleGenerate = useCallback(async () => {
-    if (!apiKey) {
-      setToastMessage("Harap masukkan Kunci API Gemini Anda di menu pengaturan.");
+    if (!activeApiKey) {
+      setToastMessage("Harap tambahkan dan pilih Kunci API Gemini yang aktif di menu pengaturan.");
       return;
     }
-    if (!referenceFile) {
-      setToastMessage("Silakan unggah gambar referensi terlebih dahulu.");
+    if (imageModel === ImageModel.GeminiFlash && !referenceFile) {
+      setToastMessage("Silakan unggah gambar referensi terlebih dahulu untuk model ini.");
       return;
     }
     if ((backgroundOption === BackgroundOption.EditBackground || productBackgroundOption === ProductBackgroundOption.CustomImage) && !customBackgroundFile) {
@@ -75,9 +91,9 @@ const App: React.FC = () => {
     try {
       let results;
       if (mode === Mode.PoseGenerator) {
-        results = await generatePoses(apiKey, referenceFile, backgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory);
+        results = await generatePoses(activeApiKey, imageModel, referenceFile, backgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory);
       } else {
-        results = await generateProductPhotos(apiKey, referenceFile, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio);
+        results = await generateProductPhotos(activeApiKey, imageModel, referenceFile, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio);
       }
       
       const newImages: GeneratedImage[] = results.map((result, i) => ({
@@ -88,13 +104,21 @@ const App: React.FC = () => {
       }));
       setGeneratedImages(newImages);
       setIsGenerated(true);
+      incrementUsage(numberOfPhotos); // Increment usage on success
     } catch (error) {
       console.error("Failed to generate images:", error);
       const errorMessage = (error as Error).message || "An unknown error occurred.";
       if (errorMessage.includes('API key not valid')) {
-          setToastMessage("Kunci API tidak valid. Silakan periksa di menu pengaturan.");
+          setToastMessage("Kunci API yang aktif tidak valid. Silakan periksa di menu pengaturan.");
       } else if (errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
-          setToastMessage("Anda telah melebihi kuota API Anda. Coba lagi nanti atau periksa paket Anda.");
+          setToastMessage(
+            <span>
+              Kuota API habis. Semua kunci API di bawah satu akun Google berbagi kuota yang sama. Untuk melanjutkan,{' '}
+              <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-red-200">
+                aktifkan penagihan di Google Cloud
+              </a>.
+            </span>
+          );
       } else {
           setToastMessage("Terjadi kesalahan saat membuat gambar. Periksa konsol untuk detailnya.");
       }
@@ -102,7 +126,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [apiKey, referenceFile, mode, backgroundOption, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory]);
+  }, [activeApiKey, referenceFile, mode, imageModel, backgroundOption, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory, incrementUsage]);
 
   const handleDownloadAll = useCallback(() => {
     generatedImages.forEach((image, index) => {
@@ -154,6 +178,8 @@ const App: React.FC = () => {
               setReferenceFile={setReferenceFile}
               mode={mode}
               setMode={setMode}
+              imageModel={imageModel}
+              setImageModel={setImageModel}
               backgroundOption={backgroundOption}
               setBackgroundOption={setBackgroundOption}
               productBackgroundOption={productBackgroundOption}
