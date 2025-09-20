@@ -5,6 +5,9 @@ import ResultsGrid from './components/ResultsGrid';
 import { Mode, BackgroundOption, GeneratedImage, ProductBackgroundOption, AspectRatio, PoseCategory } from './types';
 import { INITIAL_IMAGES } from './constants';
 import { generatePoses, generateProductPhotos } from './services/geminiService';
+import SettingsModal from './components/SettingsModal';
+import Toast from './components/Toast';
+import { useApiKey } from './contexts/ApiKeyContext';
 
 const App: React.FC = () => {
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
@@ -20,6 +23,10 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerated, setIsGenerated] = useState<boolean>(false);
   const [customBackgroundFile, setCustomBackgroundFile] = useState<File | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { apiKey } = useApiKey();
+
 
   React.useEffect(() => {
     if (mode === Mode.PoseGenerator) {
@@ -40,12 +47,16 @@ const App: React.FC = () => {
   }, [mode, backgroundOption, productBackgroundOption]);
 
   const handleGenerate = useCallback(async () => {
+    if (!apiKey) {
+      setToastMessage("Harap masukkan Kunci API Gemini Anda di menu pengaturan.");
+      return;
+    }
     if (!referenceFile) {
-      alert("Please upload a reference image first.");
+      setToastMessage("Silakan unggah gambar referensi terlebih dahulu.");
       return;
     }
     if ((backgroundOption === BackgroundOption.EditBackground || productBackgroundOption === ProductBackgroundOption.CustomImage) && !customBackgroundFile) {
-      alert("Please upload a custom background image.");
+      setToastMessage("Silakan unggah gambar latar belakang kustom.");
       return;
     }
 
@@ -64,9 +75,9 @@ const App: React.FC = () => {
     try {
       let results;
       if (mode === Mode.PoseGenerator) {
-        results = await generatePoses(referenceFile, backgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory);
+        results = await generatePoses(apiKey, referenceFile, backgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory);
       } else {
-        results = await generateProductPhotos(referenceFile, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio);
+        results = await generateProductPhotos(apiKey, referenceFile, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio);
       }
       
       const newImages: GeneratedImage[] = results.map((result, i) => ({
@@ -79,12 +90,17 @@ const App: React.FC = () => {
       setIsGenerated(true);
     } catch (error) {
       console.error("Failed to generate images:", error);
-      alert("An error occurred while generating images. Please check the console for details.");
+      const errorMessage = (error as Error).message || "An unknown error occurred.";
+      if (errorMessage.includes('API key not valid')) {
+          setToastMessage("Kunci API tidak valid. Silakan periksa di menu pengaturan.");
+      } else {
+          setToastMessage("Terjadi kesalahan saat membuat gambar. Periksa konsol untuk detailnya.");
+      }
       setGeneratedImages(INITIAL_IMAGES); // Revert to initial on error
     } finally {
       setIsLoading(false);
     }
-  }, [referenceFile, mode, backgroundOption, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory]);
+  }, [apiKey, referenceFile, mode, backgroundOption, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory]);
 
   const handleDownloadAll = useCallback(() => {
     generatedImages.forEach((image, index) => {
@@ -92,13 +108,12 @@ const App: React.FC = () => {
             const link = document.createElement('a');
             link.href = image.src;
             
-            // Improved filename sanitization for better compatibility and consistency
             const sanitizedLabel = image.label
                 .toLowerCase()
                 .trim()
-                .replace(/\s+/g, '-') // use hyphens for spaces
-                .replace(/[^a-z0-9-]/g, '') // remove invalid characters, keeping only letters, numbers, and hyphens
-                .substring(0, 50); // limit length
+                .replace(/\s+/g, '-') 
+                .replace(/[^a-z0-9-]/g, '') 
+                .substring(0, 50); 
 
             link.download = `aiphoto-${sanitizedLabel || `image-${index + 1}`}.png`;
             document.body.appendChild(link);
@@ -128,41 +143,46 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 sm:p-6 lg:p-8">
-      <main className="max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <OptionsPanel
-            referenceFile={referenceFile}
-            setReferenceFile={setReferenceFile}
-            mode={mode}
-            setMode={setMode}
-            backgroundOption={backgroundOption}
-            setBackgroundOption={setBackgroundOption}
-            productBackgroundOption={productBackgroundOption}
-            setProductBackgroundOption={setProductBackgroundOption}
-            poseCategory={poseCategory}
-            setPoseCategory={setPoseCategory}
-            stylePrompt={stylePrompt}
-            setStylePrompt={setStylePrompt}
-            numberOfPhotos={numberOfPhotos}
-            setNumberOfPhotos={setNumberOfPhotos}
-            delay={delay}
-            setDelay={setDelay}
-            aspectRatio={aspectRatio}
-            setAspectRatio={setAspectRatio}
-            onGenerate={handleGenerate}
-            onDownloadAll={handleDownloadAll}
-            isLoading={isLoading}
-            isGenerated={isGenerated}
-            customBackgroundFile={customBackgroundFile}
-            setCustomBackgroundFile={setCustomBackgroundFile}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <ResultsGrid images={generatedImages} onDownloadImage={handleDownloadImage} />
-        </div>
-      </main>
-    </div>
+    <>
+      <div className="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 sm:p-6 lg:p-8">
+        <main className="max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <OptionsPanel
+              referenceFile={referenceFile}
+              setReferenceFile={setReferenceFile}
+              mode={mode}
+              setMode={setMode}
+              backgroundOption={backgroundOption}
+              setBackgroundOption={setBackgroundOption}
+              productBackgroundOption={productBackgroundOption}
+              setProductBackgroundOption={setProductBackgroundOption}
+              poseCategory={poseCategory}
+              setPoseCategory={setPoseCategory}
+              stylePrompt={stylePrompt}
+              setStylePrompt={setStylePrompt}
+              numberOfPhotos={numberOfPhotos}
+              setNumberOfPhotos={setNumberOfPhotos}
+              delay={delay}
+              setDelay={setDelay}
+              aspectRatio={aspectRatio}
+              setAspectRatio={setAspectRatio}
+              onGenerate={handleGenerate}
+              onDownloadAll={handleDownloadAll}
+              isLoading={isLoading}
+              isGenerated={isGenerated}
+              customBackgroundFile={customBackgroundFile}
+              setCustomBackgroundFile={setCustomBackgroundFile}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+            />
+          </div>
+          <div className="lg:col-span-2">
+            <ResultsGrid images={generatedImages} onDownloadImage={handleDownloadImage} />
+          </div>
+        </main>
+      </div>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
+    </>
   );
 };
 

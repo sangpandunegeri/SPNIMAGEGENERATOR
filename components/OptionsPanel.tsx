@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { Mode, BackgroundOption, ProductBackgroundOption, AspectRatio, PoseCategory } from '../types';
 import ImageUploader from './ImageUploader';
 import Button from './Button';
+import { SettingsIcon } from './icons';
 
 interface OptionsPanelProps {
     referenceFile: File | null;
@@ -28,6 +30,7 @@ interface OptionsPanelProps {
     isGenerated: boolean;
     customBackgroundFile: File | null;
     setCustomBackgroundFile: (file: File) => void;
+    onOpenSettings: () => void;
 }
 
 const OptionsPanel: React.FC<OptionsPanelProps> = ({
@@ -55,9 +58,20 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
     isGenerated,
     customBackgroundFile,
     setCustomBackgroundFile,
+    onOpenSettings,
 }) => {
     return (
-        <div className="w-full bg-white p-6 rounded-2xl shadow-sm space-y-6">
+        <div className="w-full bg-white p-6 rounded-2xl shadow-sm space-y-6 relative">
+             <div className="absolute top-4 right-4">
+                <button 
+                    onClick={onOpenSettings} 
+                    className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Pengaturan"
+                    title="Pengaturan"
+                >
+                    <SettingsIcon className="w-6 h-6" />
+                </button>
+            </div>
             <div>
                 <h2 className="text-lg font-bold text-gray-800 mb-2">Unggah Foto Referensi</h2>
                 <ImageUploader onImageChange={setReferenceFile} />
@@ -145,7 +159,7 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
                     value={stylePrompt}
                     onChange={(e) => setStylePrompt(e.target.value)}
                     placeholder="misalnya, foto hitam putih, gaya sinematik, pencahayaan dramatis..."
-                    className="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    className="w-full p-2 bg-white text-gray-800 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors placeholder-gray-400"
                     rows={2}
                 />
             </div>
@@ -179,7 +193,7 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
             </div>
 
             <div className="flex space-x-3 pt-2">
-                 <Button onClick={onGenerate} disabled={!referenceFile || isLoading}>
+                 <Button onClick={onGenerate} disabled={isLoading}>
                     {isLoading ? 'Generating...' : `Generate ${numberOfPhotos} ${mode === Mode.PoseGenerator ? 'Pose' : 'Foto'} Baru`}
                 </Button>
                 <Button variant="secondary" onClick={onDownloadAll} disabled={!isGenerated || isLoading}>

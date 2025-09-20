@@ -1,11 +1,13 @@
+
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { BackgroundOption, ProductBackgroundOption, PoseCategory } from '../types';
 
-if (!process.env.API_KEY) {
-    console.warn("API_KEY environment variable not set. Using a placeholder key. Please set your API key for the app to function.");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "YOUR_API_KEY_HERE" });
+const getAiClient = (apiKey: string | undefined) => {
+    if (!apiKey) {
+        throw new Error("API Key is not configured. Please set it in the settings.");
+    }
+    return new GoogleGenAI({ apiKey });
+};
 
 const fileToGenerativePart = async (file: File) => {
   const base64EncodedDataPromise = new Promise<string>((resolve) => {
@@ -34,6 +36,7 @@ const getBackgroundPrompt = (backgroundOption: BackgroundOption, stylePrompt: st
 };
 
 export const generatePoses = async (
+    apiKey: string,
     referenceImageFile: File,
     backgroundOption: BackgroundOption,
     stylePrompt: string,
@@ -43,7 +46,8 @@ export const generatePoses = async (
     poseCategory: PoseCategory,
 ): Promise<{ src: string; label: string }[]> => {
     try {
-        // Step 1: Generate a list of poses based on the category
+        const ai = getAiClient(apiKey);
+        
         const poseGenerationPrompt = `Generate a list of ${numberOfPhotos} distinct ${poseCategory.toLowerCase()} photo poses and expressions. Tailor them to be suitable for the '${poseCategory}' category. Return the list as a JSON array of objects, where each object has a "poseName" key.`;
         
         const poseResponse = await ai.models.generateContent({
@@ -72,7 +76,6 @@ export const generatePoses = async (
             throw new Error('Could not generate pose ideas.');
         }
 
-        // Step 2: Generate an image for each pose
         const imagePart = await fileToGenerativePart(referenceImageFile);
         const backgroundPrompt = getBackgroundPrompt(backgroundOption, stylePrompt);
 
@@ -120,6 +123,7 @@ export const generatePoses = async (
 };
 
 export const generateProductPhotos = async (
+    apiKey: string,
     referenceImageFile: File,
     backgroundOption: ProductBackgroundOption,
     stylePrompt: string,
@@ -128,6 +132,8 @@ export const generateProductPhotos = async (
     aspectRatio: string,
 ): Promise<{ src: string; label: string }[]> => {
     try {
+        const ai = getAiClient(apiKey);
+        
         if (backgroundOption === ProductBackgroundOption.CustomImage) {
             if (!customBackgroundFile) {
                 throw new Error("A custom background image must be provided for the 'Custom Image' option.");
@@ -157,7 +163,6 @@ export const generateProductPhotos = async (
             return Promise.all(imagePromises);
         }
 
-        // Step 1: Generate a list of backgrounds (landmarks or studio setups)
         let backgroundIdeasPrompt: string;
         let responseSchema: any;
         let ideaKey: 'name' | 'description';
@@ -199,7 +204,6 @@ export const generateProductPhotos = async (
             throw new Error('Could not generate background ideas.');
         }
 
-        // Step 2: Generate an image for each background idea
         const imagePart = await fileToGenerativePart(referenceImageFile);
 
         const imagePromises = backgroundIdeas.map(async (idea) => {
