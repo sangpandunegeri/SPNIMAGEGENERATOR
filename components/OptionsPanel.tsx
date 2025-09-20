@@ -193,10 +193,10 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
             </div>
 
             <div className="flex space-x-3 pt-2">
-                 <Button onClick={onGenerate} disabled={isLoading}>
+                 <Button onClick={onGenerate} disabled={isLoading} className="w-full">
                     {isLoading ? 'Generating...' : `Generate ${numberOfPhotos} ${mode === Mode.PoseGenerator ? 'Pose' : 'Foto'} Baru`}
                 </Button>
-                <Button variant="secondary" onClick={onDownloadAll} disabled={!isGenerated || isLoading}>
+                <Button variant="secondary" onClick={onDownloadAll} disabled={!isGenerated || isLoading} className="w-full">
                     Unduh Semua
                 </Button>
             </div>

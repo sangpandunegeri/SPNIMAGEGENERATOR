@@ -21,6 +21,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
+  const handleClearKey = () => {
+    setApiKey(null);
+    setLocalApiKey('');
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -56,14 +61,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors placeholder-gray-400"
             />
              <p className="text-xs text-gray-400 mt-2">
+                Dapatkan kunci API Anda dari{' '}
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">
+                    Google AI Studio
+                </a>.
+                <br />
                 Kunci Anda disimpan dengan aman di browser Anda dan tidak pernah dibagikan.
-                <br/>
-                <b className="text-yellow-400 font-medium">Peringatan:</b> Jangan bagikan atau ekspos kunci API ini kepada siapa pun.
+            </p>
+             <p className="text-xs text-yellow-400 font-medium mt-2">
+                Peringatan: Jangan bagikan atau ekspos kunci API ini kepada siapa pun.
             </p>
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 mt-6">
+        <div className="flex justify-end items-center gap-3 mt-6">
+          <Button variant="danger" onClick={handleClearKey} className="mr-auto">Hapus Kunci</Button>
           <Button variant="secondary" onClick={onClose}>Batal</Button>
           <Button onClick={handleSave}>Simpan</Button>
         </div>

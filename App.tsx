@@ -93,6 +93,8 @@ const App: React.FC = () => {
       const errorMessage = (error as Error).message || "An unknown error occurred.";
       if (errorMessage.includes('API key not valid')) {
           setToastMessage("Kunci API tidak valid. Silakan periksa di menu pengaturan.");
+      } else if (errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+          setToastMessage("Anda telah melebihi kuota API Anda. Coba lagi nanti atau periksa paket Anda.");
       } else {
           setToastMessage("Terjadi kesalahan saat membuat gambar. Periksa konsol untuk detailnya.");
       }
