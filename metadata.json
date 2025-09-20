@@ -1,0 +1,7 @@
+{
+  "name": "PROMPT-VIDEOGENERATOR SUITE",
+  "description": "Aplikasi pembuatan prompt dan Video",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
