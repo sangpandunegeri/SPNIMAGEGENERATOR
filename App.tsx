@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerated, setIsGenerated] = useState<boolean>(false);
   const [customBackgroundFile, setCustomBackgroundFile] = useState<File | null>(null);
+  const [modelFile, setModelFile] = useState<File | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<React.ReactNode | null>(null);
   const { activeApiKey } = useApiKey();
@@ -38,12 +39,14 @@ const App: React.FC = () => {
         setProductBackgroundOption(ProductBackgroundOption.FamousPlaces);
     }
     setCustomBackgroundFile(null);
+    setModelFile(null);
   }, [mode]);
   
   React.useEffect(() => {
     // If user switches to a model that doesn't use a reference image, clear it.
     if (imageModel === ImageModel.Imagen4) {
       setReferenceFile(null);
+      setModelFile(null);
       if (backgroundOption === BackgroundOption.Reference || backgroundOption === BackgroundOption.EditBackground) {
         setBackgroundOption(BackgroundOption.Minimalist);
       }
@@ -93,7 +96,7 @@ const App: React.FC = () => {
       if (mode === Mode.PoseGenerator) {
         results = await generatePoses(activeApiKey, imageModel, referenceFile, backgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory);
       } else {
-        results = await generateProductPhotos(activeApiKey, imageModel, referenceFile, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio);
+        results = await generateProductPhotos(activeApiKey, imageModel, referenceFile, modelFile, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio);
       }
       
       const newImages: GeneratedImage[] = results.map((result, i) => ({
@@ -126,7 +129,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeApiKey, referenceFile, mode, imageModel, backgroundOption, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory, incrementUsage]);
+  }, [activeApiKey, referenceFile, mode, imageModel, backgroundOption, productBackgroundOption, stylePrompt, numberOfPhotos, customBackgroundFile, aspectRatio, poseCategory, modelFile, incrementUsage]);
 
   const handleDownloadAll = useCallback(() => {
     generatedImages.forEach((image, index) => {
@@ -200,6 +203,8 @@ const App: React.FC = () => {
               isGenerated={isGenerated}
               customBackgroundFile={customBackgroundFile}
               setCustomBackgroundFile={setCustomBackgroundFile}
+              modelFile={modelFile}
+              setModelFile={setModelFile}
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
           </div>

@@ -34,6 +34,8 @@ interface OptionsPanelProps {
     isGenerated: boolean;
     customBackgroundFile: File | null;
     setCustomBackgroundFile: (file: File) => void;
+    modelFile: File | null;
+    setModelFile: (file: File) => void;
     onOpenSettings: () => void;
 }
 
@@ -64,6 +66,8 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
     isGenerated,
     customBackgroundFile,
     setCustomBackgroundFile,
+    modelFile,
+    setModelFile,
     onOpenSettings,
 }) => {
     const isImageInputDisabled = imageModel === ImageModel.Imagen4;
@@ -73,7 +77,7 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
         if (imageModel === ImageModel.Imagen4) {
             return "Membuat gambar baru dari teks, tidak perlu foto referensi.";
         }
-        return "Mengedit foto referensi yang ada untuk pose baru.";
+        return "Mengedit foto referensi yang ada untuk pose atau produk baru.";
     };
     
     return (
@@ -88,13 +92,39 @@ const OptionsPanel: React.FC<OptionsPanelProps> = ({
                     <SettingsIcon className="w-6 h-6" />
                 </button>
             </div>
-            <div className={`transition-opacity duration-300 ${isImageInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                <h2 className="text-lg font-bold text-gray-800 mb-2">Unggah Foto Referensi</h2>
-                <div className="relative">
-                    <ImageUploader onImageChange={setReferenceFile} />
-                    {isImageInputDisabled && <div className="absolute inset-0 bg-gray-50/50" title="Model Imagen 4 tidak memerlukan gambar referensi."></div>}
+            
+            {mode === Mode.PoseGenerator ? (
+                <div className={`transition-opacity duration-300 ${isImageInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <h2 className="text-lg font-bold text-gray-800 mb-2">Unggah Foto Referensi</h2>
+                    <div className="relative">
+                        <ImageUploader onImageChange={setReferenceFile} />
+                        {isImageInputDisabled && <div className="absolute inset-0 bg-gray-50/50" title="Model Imagen 4 tidak memerlukan gambar referensi."></div>}
+                    </div>
                 </div>
-            </div>
+            ) : ( // Product Photo Mode
+                <div>
+                    <h2 className="text-lg font-bold text-gray-800 mb-2">Unggah Gambar</h2>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 transition-opacity duration-300 ${isImageInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <div className="relative">
+                            <ImageUploader 
+                                onImageChange={setReferenceFile} 
+                                title="Unggah Foto Produk"
+                                subtitle="Wajib untuk Gemini Flash"
+                            />
+                            {isImageInputDisabled && <div className="absolute inset-0 bg-gray-50/50" title="Model Imagen 4 tidak memerlukan gambar."></div>}
+                        </div>
+                        <div className="relative">
+                            <ImageUploader 
+                                onImageChange={setModelFile}
+                                title="Unggah Foto Model"
+                                subtitle="Opsional"
+                            />
+                            {isImageInputDisabled && <div className="absolute inset-0 bg-gray-50/50" title="Model Imagen 4 tidak memerlukan gambar."></div>}
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             <div>
                 <h2 className="text-lg font-bold text-gray-800 mb-2">Mode</h2>

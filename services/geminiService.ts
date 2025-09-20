@@ -161,6 +161,7 @@ export const generateProductPhotos = async (
     apiKey: string,
     imageModel: ImageModel,
     referenceImageFile: File | null,
+    modelFile: File | null,
     backgroundOption: ProductBackgroundOption,
     stylePrompt: string,
     numberOfPhotos: number,
@@ -226,19 +227,34 @@ export const generateProductPhotos = async (
         }
 
         // Image-to-image editing (existing logic)
-        if (!referenceImageFile) throw new Error("A reference image is required for this model.");
+        if (!referenceImageFile) throw new Error("A product reference image is required for this model.");
         
+        let modelPart = null;
+        if (modelFile) {
+            modelPart = await fileToGenerativePart(modelFile);
+        }
+
         if (backgroundOption === ProductBackgroundOption.CustomImage) {
             if (!customBackgroundFile) throw new Error("A custom background image must be provided.");
             const imagePart = await fileToGenerativePart(referenceImageFile);
             const backgroundPart = await fileToGenerativePart(customBackgroundFile);
 
             const imagePromises = Array.from({ length: numberOfPhotos }).map(async (_, i) => {
-                const imageGenPrompt = `Take the main subject/product from the provided reference image (the first image) and realistically place it onto the provided background image (the second image). The product should be the main focus, clearly visible, and well-integrated. The lighting on the product should match the new background. If a style prompt is provided, apply it: "${stylePrompt}". If this is not the first image generation (i > 0), introduce a slight variation in product angle or lighting. The final image must have a ${aspectRatio} aspect ratio. Ensure the final image is a photorealistic, high-quality product photo.`;
+                let imageGenPrompt: string;
+                const parts: any[] = [imagePart];
+        
+                if (modelPart) {
+                    parts.push(modelPart, backgroundPart);
+                    imageGenPrompt = `Take the product from the first image and the person from the second image. Realistically place them both onto the provided background image (the third image). The person should interact naturally with the product. The lighting on both should match the new background. Apply this style: "${stylePrompt}". Introduce a slight variation for uniqueness. The final image must have a ${aspectRatio} aspect ratio and be a photorealistic, high-quality product photo.`;
+                } else {
+                    parts.push(backgroundPart);
+                    imageGenPrompt = `Take the main subject/product from the provided reference image (the first image) and realistically place it onto the provided background image (the second image). The product should be the main focus, well-integrated, and the lighting on the product should match the new background. Apply this style: "${stylePrompt}". Introduce a slight variation if this is not the first generation. The final image must have a ${aspectRatio} aspect ratio and be a photorealistic, high-quality product photo.`;
+                }
+                parts.push({ text: imageGenPrompt });
 
                 const response = await ai.models.generateContent({
                     model: 'gemini-2.5-flash-image-preview',
-                    contents: { parts: [imagePart, backgroundPart, { text: imageGenPrompt }] },
+                    contents: { parts },
                     config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
                 });
 
@@ -280,11 +296,20 @@ export const generateProductPhotos = async (
         const imagePart = await fileToGenerativePart(referenceImageFile);
         const imagePromises = backgroundIdeas.map(async (idea) => {
             const ideaText = idea[ideaKey];
-            const imageGenPrompt = `Take the main subject/product from the provided reference image and realistically place it in the following scene: "${ideaText}". The product should be the main focus, clearly visible, and well-integrated. The lighting on the product should match the new background. If a style prompt is provided, apply it: "${stylePrompt}". The final image must have a ${aspectRatio} aspect ratio. Ensure the final image is a photorealistic, high-quality product photo.`;
+            let imageGenPrompt: string;
+            const parts: any[] = [imagePart];
+
+            if (modelPart) {
+                parts.push(modelPart);
+                imageGenPrompt = `Take the product from the first image and the person from the second image. Realistically place them both in the following scene: "${ideaText}". The person should interact naturally with the product (e.g., holding it, pointing to it). The lighting on both the person and product must match the new background. Apply this style: "${stylePrompt}". The final image must have a ${aspectRatio} aspect ratio and be a photorealistic, high-quality product photo.`;
+            } else {
+                imageGenPrompt = `Take the main subject/product from the provided reference image and realistically place it in the following scene: "${ideaText}". The product should be the main focus, well-integrated, and the lighting on the product should match the new background. Apply this style: "${stylePrompt}". The final image must have a ${aspectRatio} aspect ratio and be a photorealistic, high-quality product photo.`;
+            }
+            parts.push({ text: imageGenPrompt });
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image-preview',
-                contents: { parts: [imagePart, { text: imageGenPrompt }] },
+                contents: { parts },
                 config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
             });
 
