@@ -1,7 +1,5 @@
 {
-  "name": "PROMPT-VIDEOGENERATOR SUITE",
-  "description": "Aplikasi pembuatan prompt dan Video",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "name": "SPN-AIPHOTO Generator",
+  "description": "An AI-powered photo generator that takes a reference image and creates multiple professional poses and expressions with various studio backgrounds.",
+  "requestFramePermissions": []
 }
